@@ -1,4 +1,4 @@
-
+// ignore_for_file: avoid_print
 import 'dart:async';
 
 // Mocking the behavior of DatabaseService for testing logic
@@ -17,7 +17,7 @@ class MockDatabase {
   }
 
   Future<void> prepareItem(String daNo, String batch, String run, String pCode, double qty) async {
-    String key = "${daNo}_${batch}_${run}_${pCode}";
+    String key = "${daNo}_${batch}_${run}_$pCode";
     preparedItems[key] = (preparedItems[key] ?? 0) + qty;
     
     // Logic from _checkTotalPreparedDO0070
