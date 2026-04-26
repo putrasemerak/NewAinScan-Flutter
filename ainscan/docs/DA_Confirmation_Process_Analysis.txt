@@ -1,0 +1,747 @@
+================================================================================
+  AINSCan — DA Confirmation (Outbound DA) Process Analysis
+  Source: frmOut_DA_2.vb (VB.NET — Intermec Scanner)
+  Analyzed: March 2026
+================================================================================
+
+OVERVIEW
+--------
+The DA Confirmation process handles outbound stock preparation based on
+Delivery Advice (DA) orders. It supports two pallet types (NORMAL and LOOSE)
+and two methods (BOOKING and NORMAL). The process involves scanning a DA number,
+scanning pallets, scanning rack locations, and executing stock rack-out with
+tracking via both a local SQL Server CE database and the remote SQL Server.
+
+Forms involved:
+  - frmOut_DA_1.vb  : DA list screen (browse open DAs by date)
+  - frmOut_DA_2.vb  : Main DA preparation screen (scan + prepare)
+  - frmOut_DA_21.vb : Alternate version of frmOut_DA_2 (same logic)
+  - frmOut_DA_3.vb  : DA detail list (browse DA lines by DA number)
+
+
+================================================================================
+1. ALL TABLES & OPERATIONS
+================================================================================
+
+------------------------------------------------------------------------------
+1.1 REMOTE SQL SERVER TABLES
+------------------------------------------------------------------------------
+
+ #  | Table        | Operations              | Purpose
+----|--------------|-------------------------|----------------------------------------
+ 1  | DO_0020      | SELECT, UPDATE          | DA header/lines. Read open DA items,
+    |              |                         | update Status to 'Confirmed' when
+    |              |                         | outstanding <= 0.
+----|--------------|-------------------------|----------------------------------------
+ 2  | IV_0250      | SELECT, UPDATE, INSERT  | Inventory at location. Rack-Out
+    |              |                         | (OutputQty+, OnHand-). Insert to TST3
+    |              |                         | for pallet balance remainder.
+----|--------------|-------------------------|----------------------------------------
+ 3  | DO_0070      | SELECT, INSERT, UPDATE  | DA preparation details. Stores SelQty
+    |              |                         | (prepared qty per rack). Server-side
+    |              |                         | prepared qty tracker.
+----|--------------|-------------------------|----------------------------------------
+ 4  | TA_LOC0300   | SELECT, INSERT, UPDATE  | Outbound log (who, when, what, qty).
+----|--------------|-------------------------|----------------------------------------
+ 5  | TA_LOC0400   | SELECT, INSERT, UPDATE  | Rack change log (source rack -> TST3,
+    |              |                         | Normal pallet only).
+----|--------------|-------------------------|----------------------------------------
+ 6  | PD_0800      | SELECT, UPDATE          | Production summary. Read QS status,
+    |              |                         | update Rack_Out += and SORack -=.
+----|--------------|-------------------------|----------------------------------------
+ 7  | TA_PLT001    | SELECT                  | Pallet master - get Batch, PCode, QS,
+    |              |                         | FullQty + lsQty.
+----|--------------|-------------------------|----------------------------------------
+ 8  | TA_PLT003    | SELECT                  | Reprint pallet - fallback lookup when
+    |              |                         | pallet not found in TA_PLT001.
+----|--------------|-------------------------|----------------------------------------
+ 9  | TA_PLL001    | SELECT                  | Loose pallet details - determines
+    |              |                         | LOOSE type + loop entries for each run.
+----|--------------|-------------------------|----------------------------------------
+ 10 | TA_LOC0700   | SELECT                  | Booking table - validates pallet is
+    |              |                         | booked for this DA (BOOKING method).
+----|--------------|-------------------------|----------------------------------------
+ 11 | TA_LOC0600   | SELECT                  | Inbound records - validates pallet was
+    |              |                         | received (stock-in done).
+----|--------------|-------------------------|----------------------------------------
+ 12 | BD_0010      | SELECT                  | Location/Rack master - validates rack
+    |              |                         | number exists.
+----|--------------|-------------------------|----------------------------------------
+ 13 | PD_0010      | SELECT                  | Product/Batch master - read PGroup.
+----|--------------|-------------------------|----------------------------------------
+ 14 | SY_0040      | SELECT, UPDATE          | System sequence - serial number
+    |              |                         | generation for rack-change log.
+    |              |                         | Format: MG + 2-digit year + 4-digit seq
+
+
+------------------------------------------------------------------------------
+1.2 DETAILED COLUMN USAGE PER TABLE
+------------------------------------------------------------------------------
+
+DO_0020 (DA Header/Lines)
+  Columns: DANo, Batch, Run, Quantity, Status, PCode, Method, OrderNo,
+           CustNo, CustName, Address, PName, PGroup, Unit, OrderQty, ETD
+  - SELECT: Read open DA lines (Status='Open'), check if batch confirmed,
+            sum DA quantity by Batch+Run
+  - UPDATE: SET Status='Confirmed' when outstanding <= 0
+
+IV_0250 (Inventory at Location)
+  Columns: Loct, PCode, PGroup, Batch, PName, Unit, Run, Status, OpenQty,
+           InputQty, OutputQty, OnHand, Pallet, MFGDate, EXPDate,
+           AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: Read pallet stock (OnHand>0), verify product at rack,
+            read TST3 records
+  - UPDATE: Rack-Out (OutputQty += qty, OnHand -= qty),
+            TST3 accumulate (OnHand += balance, InputQty += balance)
+  - INSERT: New TST3 record for pallet remainder
+
+DO_0070 (DA Preparation Details)
+  Columns: DANo, OrderNo, PCode, Batch, Run, Rack, CustNo, CustName,
+           Address, PName, PGroup, DAQty, OrderQty, SelQty, Unit, Status,
+           etd, Pallet, AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: SUM(SelQty) to check total prepared, check if record exists
+  - INSERT: New preparation record with SelQty = prepared qty
+  - UPDATE: Accumulate SelQty += prepared qty
+
+TA_LOC0300 (Outbound Log)
+  Columns: PCode, PName, PGroup, DANo, Cust, Batch, Run, Pallet, Rack,
+           Qty, Unit, AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: Check if log exists for DANo+Batch+Run+Pallet
+  - INSERT: New outbound log entry
+  - UPDATE: Update existing log entry
+
+TA_LOC0400 (Rack Change Log — Normal Pallet Only)
+  Columns: SNo, Rack, NRack, BN, Run, PCode, PName, PGroup, PltNo, Qty,
+           Unit, Remark, AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: COUNT(SNo) to check if log exists
+  - INSERT: Log rack change from source rack to TST3
+            Remark = 'Mobile Scanner Outbound'
+  - UPDATE: Update existing rack change log
+
+PD_0800 (Production Summary)
+  Columns: QS, Rack_Out, SORack, Batch, Run, PCode
+  - SELECT: Read QS (Quality Status), read Rack_Out and SORack values
+  - UPDATE: Rack_Out += PreparedQty, SORack -= PreparedQty
+
+TA_PLT001 (Pallet Master)
+  Columns: PltNo, Batch, PCode, QS, Cycle, FullQty, lsQty
+  - SELECT: Look up pallet info, calculate qty = FullQty + lsQty
+
+TA_PLT003 (Reprint Pallet — Fallback)
+  Columns: PltNo, PCode, Batch, Cycle, Actual
+  - SELECT: Fallback when pallet not found in TA_PLT001
+
+TA_PLL001 (Loose Pallet Details)
+  Columns: PltNo, Batch, Run, PCode, and all detail columns
+  - SELECT: COUNT to determine pallet type (LOOSE vs NORMAL)
+  - SELECT: All rows for this pallet — loop through for LOOSE processing
+
+TA_LOC0700 (Booking Table)
+  Columns: Pallet, DANo, Qty
+  - SELECT: Validate pallet is booked for this DA, get booking qty
+
+TA_LOC0600 (Inbound / Stock In Records)
+  Columns: Pallet
+  - SELECT: Validate inbound has been done for this pallet
+
+BD_0010 (Location / Rack Master)
+  Columns: Rack
+  - SELECT: Validate rack number exists
+
+PD_0010 (Product / Batch Master)
+  Columns: PGroup, Batch
+  - SELECT: Read PGroup for outbound log
+
+SY_0040 (System Sequence Number)
+  Columns: KeyCD1, KeyCD2, MSEQ
+  - SELECT: Read current sequence (KeyCD2='52')
+  - UPDATE: Increment MSEQ by 1
+  - Serial format: MG + 2-digit year + 4-digit zero-padded sequence
+
+
+------------------------------------------------------------------------------
+1.3 LOCAL SQL SERVER CE TABLE
+------------------------------------------------------------------------------
+
+Table: DA_Confirm
+Database: \Program files\AINScan\appDatabase.sdf
+
+  Column     | Type (inferred) | Purpose
+  -----------|-----------------|----------------------------------------
+  DANo       | String          | DA Number
+  Batch      | String          | Batch code
+  Run        | String          | Run / Cycle number
+  Qty        | Numeric         | DA required quantity (from DO_0020.Quantity)
+  PCode      | String          | Product code
+  Prepared   | Numeric         | Accumulated prepared qty (starts at 0)
+  Status     | String          | Status (from DO_0020.Status)
+  PreparedBy | String          | User who prepared
+  AddDate    | DateTime        | Date of last preparation
+  AddTime    | DateTime        | Time of last preparation
+
+  Operations:
+  - SELECT COUNT : Check if row exists before insert
+  - INSERT       : Copy DA line from DO_0020 with Prepared=0
+  - SELECT *     : Check if preparation started (Prepared > 0)
+  - SELECT       : Read current Prepared value before update
+  - UPDATE       : Accumulate Prepared += PreparedQty
+  - SELECT SUM   : Sum total prepared for confirmation check
+  - DELETE        : Clear ALL records (Clear Log button)
+
+
+================================================================================
+2. COMPLETE PROCESS FLOW
+================================================================================
+
+------------------------------------------------------------------------------
+STEP A: SCAN DA NUMBER (barcode length = 13, extract 12 chars)
+------------------------------------------------------------------------------
+
+  1. Set txtDANo = uppercase barcode (first 12 chars)
+  2. Open local DB connection (appDatabase.sdf)
+  3. Open remote SQL Server connection
+
+  4. Query DO_0020:
+     SELECT DANo, Batch, Run, Quantity, Status, PCode
+     FROM DO_0020
+     WHERE DANo = @DANo AND Status = 'Open'
+
+     -> If 0 rows: "DA Ini Telah Siap" (DA already completed) -> exit
+
+  5. For EACH open row in DO_0020:
+     a. Check local DA_Confirm:
+        SELECT COUNT(DANo) FROM DA_Confirm
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+     b. If not exists -> INSERT into DA_Confirm:
+        INSERT INTO DA_Confirm (DANo, Batch, Run, Qty, PCode, Prepared, Status)
+        VALUES (@DANo, @Batch, @Run, @Qty, @PCode, 0, @Status)
+        (Prepared = 0, Qty = DO_0020.Quantity)
+
+  6. Query DO_0020 again for Method:
+     SELECT Method, Batch, Run FROM DO_0020
+     WHERE DANo = @DANo AND Status = 'Open'
+
+     -> Set txtMethod = "BOOKING" or "NORMAL"
+     -> Populate batch listview (lvBatch) with Batch + Run columns
+
+  7. Focus -> Pallet Number input
+
+
+------------------------------------------------------------------------------
+STEP B: SCAN PALLET NUMBER (barcode length = 8 or 9)
+------------------------------------------------------------------------------
+
+  1. Extract pallet number (7 or 8 chars from barcode)
+     Set Kulim = True if barcode length = 9 (Kulim-origin product)
+
+  2. Validate DA number is present (txtDANo not empty)
+
+  3. Open local DB connection
+
+  4. IF METHOD = BOOKING:
+     a. Query TA_LOC0700:
+        SELECT * FROM TA_LOC0700
+        WHERE Pallet = @Pallet AND DANo = @DANo
+        -> If not found: "Pallet tiada dalam senarai booking" -> exit
+        -> If found: get booking qty
+
+  5. ALWAYS: Query TA_LOC0600:
+     SELECT * FROM TA_LOC0600 WHERE Pallet = @Pallet
+     -> If not found: "Tiada rekod terima. Sila terima (inbound) dahulu" -> exit
+
+  6. Open remote connection
+
+  7. DETERMINE PALLET TYPE (Pallet_Type subroutine):
+     -> If Kulim = True -> NORMAL
+     -> Else: SELECT COUNT(PltNo) FROM TA_PLL001 WHERE PltNo = @PltNo
+        If found -> LOOSE
+        Else -> NORMAL
+
+  --- NORMAL PALLET ---
+
+  8. IF Kulim = True:
+     Query IV_0250:
+     SELECT * FROM IV_0250 WHERE Pallet = @Pallet AND OnHand > 0
+     -> Get Batch, Run, PCode, OnHand
+
+  9. IF Kulim = False:
+     Query TA_PLT001:
+     SELECT PltNo, Batch, PCode, QS, Cycle, FullQty, lsQty
+     FROM TA_PLT001 WHERE PltNo = @PltNo
+     -> Get Batch, Run(=Cycle), PCode, QS, calculate qty = FullQty + lsQty
+     -> If not found: fallback to TA_PLT003:
+        SELECT PltNo, PCode, Batch, Cycle, Actual
+        FROM TA_PLT003 WHERE PltNo = @PltNo
+
+     QS VALIDATION (from TA_PLT001):
+     -> Must be WHP, WPT, or QQP
+     -> Otherwise: "masalah pallet" (problem pallet) -> exit
+
+  10. CHECK QS IN PD_0800:
+      SELECT QS FROM PD_0800
+      WHERE Batch = @Batch AND Run = @Run AND PCode = @PCode
+      -> Must be WHP or WPT
+      -> WHP/WPT: green background
+      -> Other: red background
+
+  11. VALIDATE BATCH+RUN IN DA (DO_0020):
+      SELECT Status FROM DO_0020
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run
+      -> If Status = 'Confirmed': "Batch sudah siap" -> exit
+      -> If not found: "Batch tiada dalam DA" -> exit
+
+  12. READ PALLET QUANTITY (IV_0250):
+      SELECT OnHand FROM IV_0250
+      WHERE Pallet = @Pallet AND OnHand > 0
+      -> If 0: "Pallet tiada di lokasi" -> exit
+      -> Set PalletQty = OnHand
+
+  13. SUM DA QUANTITY (DO_0020):
+      SELECT DANo, Batch, Run, SUM(Quantity) AS SumOfQty
+      FROM DO_0020
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run
+      GROUP BY DANo, Batch, Run
+      -> Set DAQty = SumOfQty
+
+  14. CHECK PREVIOUS LOCAL PREPARATION (DA_Confirm):
+      SELECT * FROM DA_Confirm
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+      -> If Prepared > 0: display TotalQty = Prepared
+      -> Outstanding = DAQty - Prepared
+
+  15. CHECK PREPARATION IN DO_0070 (server):
+      SELECT SUM(SelQty) AS SumOfPrepared FROM DO_0070
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+      -> If Outstanding <= 0:
+         UPDATE DO_0020 SET Status='Confirmed'
+         WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+         -> "Batch sudah siap" -> exit
+
+  16. CALCULATE PREPARED QTY:
+      PreparedQty = MIN(PalletQty, OutstandingDA)
+
+  17. Focus -> Rack Number input
+
+  --- LOOSE PALLET ---
+
+  8. Set fields to "Auto"
+  9. Focus -> Rack Number input
+     (User scans rack, then clicks Prepare which auto-processes all runs)
+
+
+------------------------------------------------------------------------------
+STEP C: SCAN RACK / LOCATION (barcode length = 5 or 6)
+------------------------------------------------------------------------------
+
+  1. Extract rack number (4 or 5 chars from barcode)
+
+  2. Validate pallet number is present
+
+  3. Open remote connection
+
+  4. VALIDATE RACK EXISTS (BD_0010):
+     SELECT Rack FROM BD_0010 WHERE Rack = @Rack
+     -> If not found: "Nombor lokasi tidak sah" -> exit
+
+  --- NORMAL PALLET ---
+
+  5. VERIFY STOCK AT LOCATION (IV_0250):
+     SELECT COUNT(loct) FROM IV_0250
+     WHERE loct=@Loct AND Batch=@Batch AND Run=@Run AND OnHand > 0
+     -> If 0: "Produk tiada di lokasi ini" -> exit
+
+  6. Adjust PreparedQty if > OutstandingDA:
+     PreparedQty = MIN(PreparedQty, Outstanding)
+
+  7. Check QS in PD_0800 again (6-char barcode path only)
+
+  8. Focus -> PreparedQty field (editable, with SelectAll)
+
+  --- LOOSE PALLET ---
+
+  5. Focus -> Prepare button
+
+
+------------------------------------------------------------------------------
+STEP D: PRESS PREPARE BUTTON (btnPrepared_Click)
+------------------------------------------------------------------------------
+
+  PRE-VALIDATIONS (both types):
+  - Set empty fields to "0"
+  - BOOKING method: TotalQty must equal BookingPalletQty
+    Otherwise: "Qty pallet tidak sama" -> reject
+
+  ==========================================
+  D1. NORMAL PALLET FLOW
+  ==========================================
+
+  1. Validate rack number is present
+  2. Validate PreparedQty <= PalletQty AND PreparedQty > 0
+
+  3. Open local DB + remote connection
+
+  4. RACK-OUT FROM IV_0250:
+     a. SELECT * FROM IV_0250
+        WHERE Loct=@Loct AND Batch=@Batch AND Run=@Run
+        AND Pallet=@Pallet AND PCode=@PCode AND OnHand > 0
+        -> If not exists: error -> exit
+
+     b. UPDATE IV_0250
+        SET OutputQty = OutputQty + @Qty,
+            OnHand = OnHand - @Qty,
+            EditUser = @User, EditDate = @Date, EditTime = @Time
+        WHERE Loct=@Loct AND Batch=@Batch AND Run=@Run
+        AND Pallet=@Pallet AND OnHand > 0
+
+  5. UPDATE LOCAL DA_Confirm:
+     a. SELECT Prepared FROM DA_Confirm
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+     b. UPDATE DA_Confirm
+        SET Prepared = @OldPrepared + @PreparedQty,
+            PreparedBy = @User, AddDate = @Date, AddTime = @Time
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+  6. IF PALLET HAS REMAINING BALANCE (PalletQty > PreparedQty):
+
+     a. Calculate PalletBalance = PalletQty - PreparedQty
+
+     b. SECOND RACK-OUT for remaining balance:
+        UPDATE IV_0250
+        SET OutputQty = OutputQty + @Balance,
+            OnHand = OnHand - @Balance
+        WHERE Loct=@Loct AND Batch=@Batch AND Run=@Run
+        AND Pallet=@Pallet AND OnHand > 0
+
+     c. TST3 STAGING — Check if TST3 record exists:
+        SELECT * FROM IV_0250
+        WHERE Batch=@Batch AND Run=@Run AND Loct='TST3' AND Pallet=@Pallet
+
+        IF NOT EXISTS -> INSERT:
+        INSERT INTO IV_0250
+        (Loct, PCode, PGroup, Batch, PName, Unit, Run, Status,
+         OpenQty, InputQty, OutputQty, OnHand, Pallet,
+         MFGDate, EXPDate, AddUser, AddDate, AddTime)
+        VALUES ('TST3', @PCode, @PGroup, @Batch, @PName, @Unit, @Run,
+                'Open', 0, @Balance, 0, @Balance, @Pallet,
+                @MFGDate, @EXPDate, @User, @Date, @Time)
+
+        IF EXISTS -> UPDATE:
+        UPDATE IV_0250
+        SET OnHand = OnHand + @Balance,
+            InputQty = InputQty + @Balance,
+            Pallet = @Pallet,
+            EditUser = @User, EditDate = @Date, EditTime = @Time
+        WHERE Batch=@Batch AND Run=@Run AND Loct='TST3'
+        AND Pallet=@Pallet
+
+     d. GENERATE SERIAL NUMBER (Seq_Check):
+        SELECT * FROM SY_0040
+        WHERE KeyCD1=... AND KeyCD2='52'
+        -> MSEQ = current sequence
+        -> UPDATE SY_0040 SET MSEQ = MSEQ + 1
+        -> Format: MG + 2-digit year + 4-digit zero-padded MSEQ
+
+     e. LOG RACK CHANGE (TA_LOC0400):
+        SELECT COUNT(SNo) FROM TA_LOC0400
+        WHERE SNo=@SNo AND Rack=@Rack AND NRack=@NRack
+
+        IF NOT EXISTS -> INSERT:
+        INSERT INTO TA_LOC0400
+        (SNo, Rack, NRack, BN, Run, PCode, PName, PGroup, PltNo,
+         Qty, Unit, Remark, AddUser, AddDate, AddTime)
+        VALUES (@SNo, @Rack, 'TST3', @Batch, @Run, @PCode, @PName,
+                @PGroup, @Pallet, @Balance, @Unit,
+                'Mobile Scanner Outbound', @User, @Date, @Time)
+
+        IF EXISTS -> UPDATE:
+        UPDATE TA_LOC0400
+        SET Rack=@Rack, NRack='TST3', Qty=@Balance,
+            EditUser=@User, EditDate=@Date, EditTime=@Time
+        WHERE SNo=@SNo AND Rack=@Rack AND NRack='TST3'
+
+  7. UPDATE DO_0070 (DA Preparation Details):
+     a. Read source data from DO_0020:
+        SELECT * FROM DO_0020
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+     b. Check if DO_0070 record exists:
+        SELECT SelQty FROM DO_0070
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND Rack=@Rack
+
+        IF NOT EXISTS -> INSERT:
+        INSERT INTO DO_0070
+        (DANo, OrderNo, PCode, Batch, Run, Rack, CustNo, CustName,
+         Address, PName, PGroup, DAQty, OrderQty, SelQty, Unit,
+         Status, etd, Pallet, AddUser, AddDate, AddTime)
+        VALUES (... SelQty = @PreparedQty ...)
+
+        IF EXISTS -> UPDATE:
+        UPDATE DO_0070
+        SET SelQty = SelQty + @PreparedQty,
+            EditUser=@User, EditDate=@Date, EditTime=@Time
+            (+ all other columns refreshed)
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND Rack=@Rack
+
+  8. UPDATE TA_LOC0300 (Outbound Log):
+     a. Read PGroup from PD_0010:
+        SELECT PGroup FROM PD_0010 WHERE Batch=@Batch
+
+     b. Check if log exists:
+        SELECT * FROM TA_LOC0300
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND Pallet=@Pallet
+
+        IF NOT EXISTS -> INSERT:
+        INSERT INTO TA_LOC0300
+        (PCode, PName, PGroup, DANo, Cust, Batch, Run, Pallet,
+         Rack, Qty, Unit, AddUser, AddDate, AddTime)
+        VALUES (...)
+
+        IF EXISTS -> UPDATE:
+        UPDATE TA_LOC0300 SET ... EditUser, EditDate, EditTime ...
+
+  9. UPDATE PD_0800 (Production Summary):
+     a. Read current values:
+        SELECT Rack_Out, SORack FROM PD_0800
+        WHERE Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+     b. UPDATE PD_0800
+        SET Rack_Out = @OldRackOut + @PreparedQty,
+            SORack = @OldSORack - @PreparedQty
+        WHERE Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+  10. CHECK TOTAL PREPARED — LOCAL (DA_Confirm):
+      SELECT SUM(Prepared) AS SumOfPrepared FROM DA_Confirm
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+      Outstanding = DAQty - SumOfPrepared
+
+      IF Outstanding <= 0:
+        UPDATE DO_0020
+        SET Status = 'Confirmed'
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+  11. CHECK TOTAL PREPARED — SERVER (DO_0070):
+      SELECT SUM(SelQty) AS SumOfPrepared FROM DO_0070
+      WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+      Outstanding = DAQty - SumOfPrepared
+
+      IF Outstanding <= 0:
+        UPDATE DO_0020
+        SET Status = 'Confirmed'
+        WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+        -> "Produk & Batch sudah siap"
+
+  12. CHECK IF ENTIRE DA IS DONE:
+      SELECT COUNT(DANo) FROM DO_0020
+      WHERE DANo=@DANo AND Status='Open'
+
+      IF count = 0:
+        -> "DA sudah siap sepenuhnya"
+        -> Clear all fields
+
+  ==========================================
+  D2. LOOSE PALLET FLOW
+  ==========================================
+
+  Loops through EVERY row in TA_PLL001 for this pallet:
+
+  SELECT * FROM TA_PLL001 WHERE PltNo = @PltNo
+
+  FOR EACH Batch+Run entry:
+
+    1. Get PCode from TA_PLT001 (fallback TA_PLT003):
+       SELECT PCode FROM TA_PLT001 WHERE PltNo=@PltNo
+       (or) SELECT PCode FROM TA_PLT003 WHERE PltNo=@PltNo
+
+    2. Sum DA qty from DO_0020:
+       SELECT SUM(Quantity) FROM DO_0020
+       WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run
+       GROUP BY ...
+
+    3. Check local preparation in DA_Confirm:
+       SELECT * FROM DA_Confirm
+       WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+    4. Check prepared in DO_0070:
+       SELECT SUM(SelQty) FROM DO_0070
+       WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+       -> If Outstanding <= 0: skip this entry (already done)
+
+    5. Read stock from IV_0250 at the rack location:
+       SELECT * FROM IV_0250
+       WHERE Loct=@Loct AND Batch=@Batch AND Run=@Run
+       AND Pallet=@Pallet AND PCode=@PCode AND OnHand > 0
+       -> If no stock: skip this entry
+
+    6. RACK-OUT: UPDATE IV_0250
+       SET OutputQty += Qty, OnHand -= Qty
+
+    7. UPDATE DA_Confirm (local):
+       Prepared += PreparedQty
+
+    8. TST3 handling if balance remains (same as Normal)
+
+    9. UPDATE DO_0070 (same as Normal, with PCode filter)
+
+   10. UPDATE TA_LOC0300 outbound log (same as Normal, with PCode filter)
+
+   11. UPDATE PD_0800 (same as Normal)
+
+   12. Check prepared (local DA_Confirm + server DO_0070)
+       -> Auto-confirm if done
+
+   13. Check entire DA completion -> same as Normal
+
+  END FOR EACH
+
+  -> "Outbound pallet pukal berjaya" (Loose pallet outbound completed)
+
+
+================================================================================
+3. VALIDATION LOGIC SUMMARY
+================================================================================
+
+  Validation                    | Table Checked    | When
+  ------------------------------|------------------|---------------------------
+  DA already completed          | DO_0020          | DA scan
+  Pallet in booking list        | TA_LOC0700       | Pallet scan (BOOKING only)
+  Inbound done                  | TA_LOC0600       | Pallet scan
+  Valid pallet number           | TA_PLT001/003    | Pallet scan
+  Pallet QS status              | TA_PLT001.QS     | Pallet scan
+    -> Must be WHP, WPT, or QQP |                  |
+  Production QS status          | PD_0800.QS       | Pallet scan + Rack scan
+    -> Must be WHP or WPT       |                  |
+  Batch exists in DA            | DO_0020          | Pallet scan
+  Batch already confirmed       | DO_0020.Status   | Pallet scan
+    -> Must NOT be 'Confirmed'  |                  |
+  Pallet has stock              | IV_0250.OnHand   | Pallet scan
+    -> Must be > 0              |                  |
+  Valid rack number             | BD_0010          | Rack scan
+  Product at rack location      | IV_0250          | Rack scan
+    -> COUNT > 0                |                  |
+  PreparedQty <= PalletQty      | In-memory        | Prepare button
+  PreparedQty > 0               | In-memory        | Prepare button
+  PreparedQty <= Outstanding    | In-memory        | Prepare / Rack scan
+    -> Auto-adjusted            |                  |
+  Booking qty match             | In-memory        | Prepare (BOOKING)
+    -> TotalQty = BookingQty    |                  |
+  DA+PreparedQty not exceeding  | In-memory        | PreparedQty Enter key
+    -> DAQty-(Total+Prep) >= 0  |                  |
+  Stock at rack for rack-out    | IV_0250          | Prepare button
+
+
+================================================================================
+4. LOCAL DA_Confirm — PREPARED vs REQUIRED QTY COMPARISON
+================================================================================
+
+  This is the KEY local tracking mechanism that ensures prepared quantities
+  match required DA quantities. It provides offline resilience and acts as
+  a redundant tracker alongside the server-side DO_0070.
+
+  STAGE 1 — INITIALIZATION (DA Scan):
+  ------------------------------------
+  When a DA is scanned, each DO_0020 line (DANo+Batch+Run+PCode) is checked
+  in the local DA_Confirm table. If not present:
+
+    INSERT INTO DA_Confirm (DANo, Batch, Run, Qty, PCode, Prepared, Status)
+    VALUES (@DANo, @Batch, @Run, @DO_0020_Quantity, @PCode, 0, 'Open')
+
+    -> Qty = required quantity (from DO_0020.Quantity)
+    -> Prepared = 0 (nothing prepared yet)
+
+  STAGE 2 — TRACKING (Pallet Scan):
+  -----------------------------------
+  When a pallet is scanned, the system reads DA_Confirm for
+  DANo+Batch+Run+PCode:
+
+    -> If Prepared > 0: display as TotalQty on screen
+    -> Outstanding = Qty - Prepared
+       (i.e., DO_0020.Quantity minus accumulated prepared)
+
+  STAGE 3 — ACCUMULATION (Prepare Click):
+  ----------------------------------------
+  After successful rack-out from IV_0250:
+
+    1. Read current Prepared:
+       SELECT Prepared FROM DA_Confirm
+       WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+    2. UPDATE DA_Confirm
+       SET Prepared = @OldPrepared + @PreparedQty,
+           PreparedBy = @User, AddDate = @Date, AddTime = @Time
+       WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+  STAGE 4 — CONFIRMATION CHECK (Dual):
+  -------------------------------------
+  After each preparation, TWO checks are performed:
+
+    LOCAL CHECK:
+    SELECT SUM(Prepared) AS SumOfPrepared FROM DA_Confirm
+    WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+    Compare: Outstanding = DAQty (from DO_0020 SUM) - SUM(Prepared)
+    If Outstanding <= 0 -> UPDATE DO_0020 SET Status='Confirmed'
+
+    SERVER CHECK:
+    SELECT SUM(SelQty) AS SumOfPrepared FROM DO_0070
+    WHERE DANo=@DANo AND Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+    Compare: Outstanding = DAQty (from DO_0020 SUM) - SUM(SelQty)
+    If Outstanding <= 0 -> UPDATE DO_0020 SET Status='Confirmed'
+                        -> "Produk & Batch sudah siap"
+
+  STAGE 5 — FULL DA CHECK:
+  -------------------------
+  After confirming a batch:
+
+    SELECT COUNT(DANo) FROM DO_0020
+    WHERE DANo=@DANo AND Status='Open'
+
+    If 0 remaining -> "DA sudah siap sepenuhnya" -> clear everything
+
+  KEY COMPARISON FIELDS:
+  ----------------------
+    Field             | Source                      | Meaning
+    ------------------|-----------------------------|--------------------------
+    Required Qty      | DO_0020.Quantity ->          | How much needs to be
+                      | DA_Confirm.Qty              | prepared
+    Prepared Qty      | DA_Confirm.Prepared          | How much prepared (local)
+    Server Prepared   | DO_0070.SelQty               | How much prepared (server)
+    Outstanding       | Qty - Prepared (local) or    | How much remains
+                      | DAQty - SUM(SelQty) (server) |
+
+  The local DA_Confirm acts as a REDUNDANT TRACKER — it mirrors the
+  server-side DO_0070 but provides offline resilience. Both are checked
+  after each preparation. The confirmation (DO_0020.Status = 'Confirmed')
+  fires when one or both show Outstanding <= 0.
+
+  The DA_Confirm table can be cleared manually via the "Clear Log" button:
+    DELETE FROM DA_Confirm (removes all rows)
+
+
+================================================================================
+5. OTHER BUTTONS / ACTIONS
+================================================================================
+
+  Button        | Action
+  --------------|--------------------------------------------------------------
+  Clear Log     | DELETE FROM DA_Confirm (all rows). Clears all text fields.
+  TST3          | Sets rack number to "TST3". Focus -> PreparedQty.
+                | Allows manual selection of staging area.
+  Cancel        | Clears all text fields without database changes.
+  Close         | Disposes barcode reader, hides form.
+  Reload Scanner| Re-initializes the Intermec barcode reader.
+  Location      | Opens frmLokasi form (passing Batch and DANo).
+  Change Rack   | Opens frmChangeRack form.
+  Batch ListView| Queries IV_0250 for Loct+Pallet WHERE Batch+Run+OnHand>0,
+  Click         | populates location listview (lvLoct).
+  PreparedQty   | Validates DAQty - (TotalQty + PreparedQty) >= 0;
+  Enter Key     | if not, rejects input.
+
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

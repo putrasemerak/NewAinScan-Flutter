@@ -1,0 +1,17 @@
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Release\AppDatabase.sdf
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Release\SCANNER.exe
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Release\SCANNER.pdb
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Release\SCANNER.xml
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Release\System.Data.SqlClient.dll
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\ResolveAssemblyReference.cache
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmScan2.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmDB.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmMain.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmScan3.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmScan4.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.Resources.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.frmScan.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.vbproj.GenerateResource.Cache
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.exe
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.xml
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Release\SCANNER.pdb

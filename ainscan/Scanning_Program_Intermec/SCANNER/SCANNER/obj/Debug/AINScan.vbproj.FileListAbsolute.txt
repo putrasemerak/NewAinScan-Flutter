@@ -1,0 +1,189 @@
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\bin\Debug\System.Data.SqlClient.dll
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmScan.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.MessageForm.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Document\Visual Studio 2008\Projects\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\BarCode_Source\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\BarCode_Source\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\BarCode_Source\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\BarCode_Source\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmScan.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\BarCode_Source\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmScan.resources
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmScan.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmBincard.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_2.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_3.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_4.resources
+D:\Barcode_Source\Barcode_Source_Xtranfer_Sheet\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIN_TST.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmBincard.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_2.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_3.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_4.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIN_TST.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\System.Data.SqlClient.dll
+D:\Barcode_Source\Scanning_Program\SCANNER\SCANNER\bin\Debug\System.Data.SqlServerCe.dll
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\Intermec.DataCollection.CF3.5.dll
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\System.Data.SqlClient.dll
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\System.Data.SqlServerCe.dll
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\bin\Debug\Intermec.DataCollection.CF3.5.xml
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmBincard.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_2.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_3.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_4.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIN_TST.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program_Block_Input\SCANNER\SCANNER\obj\Debug\AINScan.pdb
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\AppDatabase.sdf
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\AINScan.pdb
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\System.Data.SqlClient.dll
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\bin\Debug\System.Data.SqlServerCe.dll
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\ResolveAssemblyReference.cache
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmBincard.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmList.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmLokasi.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_2.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_3.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmMenu_4.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_1.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_2.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmOut_DA_3.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmReceiving.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmDB.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmMain.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIn_1.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmChangeRack.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmMainMenu.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmListStockTake.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmStockIN_TST.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.frmStockTake.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.Resources.resources
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.vbproj.GenerateResource.Cache
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.exe
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.xml
+D:\Barcode_Source\Scanning_Program_Intermec\SCANNER\SCANNER\obj\Debug\AINScan.pdb

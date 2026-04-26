@@ -1,0 +1,12 @@
+{
+  "name": "ainscan-api-server",
+  "version": "1.0.0",
+  "description": "API proxy server for AINScan Flutter Web → SQL Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mssql": "^11.0.1"
+  }
+}

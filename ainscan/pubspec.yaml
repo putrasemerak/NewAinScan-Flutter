@@ -1,0 +1,52 @@
+name: ainscan
+description: "AINScan - Warehouse Management Scanning Application"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # SQL Server connectivity (Android/iOS only – see database_service_native.dart)
+  sql_conn: ^2.0.0
+
+  # Local database (replaces SQL Server CE)
+  sqflite: ^2.4.2
+  sqflite_common_ffi_web: ^0.4.5+3    # Web SQLite via WASM
+  path: ^1.9.1
+
+  # Barcode scanning (replaces Intermec hardware scanner)
+  mobile_scanner: ^7.0.1
+
+  # State management
+  provider: ^6.1.4
+
+  # Connectivity check
+  connectivity_plus: ^6.1.4
+
+  # Date formatting
+  intl: ^0.20.2
+
+  # HTTP client for web database proxy
+  http: ^1.3.0
+
+  # Google Fonts (Roboto Condensed for compact UI)
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/ain_logo.png
+    - google_fonts/

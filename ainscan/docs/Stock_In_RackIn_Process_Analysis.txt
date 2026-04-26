@@ -1,0 +1,711 @@
+================================================================================
+  AINSCan — Stock-In (Rack-In) Process Analysis
+  Source: frmStockIn_1.vb, frmReceiving.vb, frmStockIN_TST.vb (VB.NET)
+  Flutter: lib/screens/stock_in/rack_in_screen.dart
+  Analyzed: March 2026
+================================================================================
+
+OVERVIEW
+--------
+The Stock-In process handles inbound stock movement from production transit 
+locations to physical rack locations in the Finished Goods Warehouse (FGWH).
+The process supports two pallet types (NORMAL and LOOSE) and two product 
+origins (KB/local and Kulim). The full flow involves:
+
+  1. Receiving (TST1 → TST2)         — frmReceiving.vb
+  2. Rack-In  (TST2/TST4 → Rack)     — frmStockIn_1.vb
+  3. Combined (TST1 → TST2 → Rack)   — frmStockIN_TST.vb
+
+Transit Location Flow:
+  Production → TST1 (Production Transit)
+             → [Receiving marks TStatus='Transfer']
+             → TST2 (FGWH Transit)
+             → [Rack-In moves to actual rack]
+             → Rack Location (e.g., A01A)
+
+  Kulim Products: TST4 → Rack Location (bypasses TST1/TST2)
+
+Forms involved:
+  - frmReceiving.vb    : Receiving screen (scan pallet, move TST1→TST2)
+  - frmStockIn_1.vb    : Rack-In screen (scan pallet+rack, move TST2→Rack)
+  - frmStockIN_TST.vb  : Combined receive+rack-in (TST1→TST2→Rack)
+  - frmLokasi.vb       : Location viewer (read-only stock lookup)
+
+Flutter implementation:
+  - lib/screens/stock_in/rack_in_screen.dart  (maps to frmStockIn_1.vb)
+
+
+================================================================================
+1. ALL TABLES & OPERATIONS
+================================================================================
+
+------------------------------------------------------------------------------
+1.1 REMOTE SQL SERVER TABLES
+------------------------------------------------------------------------------
+
+ #  | Table        | Operations              | Purpose
+----|--------------|-------------------------|----------------------------------------
+ 1  | TA_PLT001    | SELECT, UPDATE          | Pallet Card master. Read pallet info
+    |              |                         | (PCode, Batch, Cycle, FullQty, lsQty).
+    |              |                         | UPDATE TStatus='Transfer' on receive,
+    |              |                         | UPDATE Status='C' on rack-in close.
+----|--------------|-------------------------|----------------------------------------
+ 2  | TA_PLT002    | SELECT, UPDATE          | Transfer Sheet. Track transfer status.
+    |              |                         | UPDATE TStatus='Transfer' on receive,
+    |              |                         | UPDATE Status='C' on rack-in close.
+----|--------------|-------------------------|----------------------------------------
+ 3  | TA_PLL001    | SELECT                  | Loose Pallet details. Determines if
+    |              |                         | pallet is LOOSE, reads each batch/run
+    |              |                         | and qty for loop processing.
+----|--------------|-------------------------|----------------------------------------
+ 4  | IV_0250      | SELECT, UPDATE, INSERT  | Inventory at location. Deduct from
+    |              |                         | transit (TST1/TST2/TST4), register at
+    |              |                         | rack location.
+----|--------------|-------------------------|----------------------------------------
+ 5  | BD_0010      | SELECT                  | Location/Rack master. Validates rack
+    |              |                         | number exists.
+----|--------------|-------------------------|----------------------------------------
+ 6  | PD_0800      | SELECT, UPDATE          | Stock Summary. Validate stock summary
+    |              |                         | exists, update Rack_In, SORack,
+    |              |                         | Balance (Kulim only).
+----|--------------|-------------------------|----------------------------------------
+ 7  | TA_LOC0600   | SELECT, INSERT, UPDATE  | Rack-In log record. Tracks who/when/
+    |              |                         | what was racked in. Ref=1 (Normal),
+    |              |                         | Ref=2 (Loose).
+----|--------------|-------------------------|----------------------------------------
+ 8  | PD_0010      | SELECT                  | Batch master. Read UKEKN1 to determine
+    |              |                         | if batch has runs. (frmLokasi only)
+----|--------------|-------------------------|----------------------------------------
+ 9  | DO_0020      | SELECT                  | DA/Delivery order. Read batch/run for
+    |              |                         | location viewer. (frmLokasi only)
+----|--------------|-------------------------|----------------------------------------
+ 10 | SY_0040      | SELECT, UPDATE          | Sequence Number generator. Format:
+    |              |                         | TS<YY><5-digit seq>. (frmStockIN_TST)
+----|--------------|-------------------------|----------------------------------------
+
+LOCAL SCANNER DATABASE (SQL Server CE / SQLite):
+ 11 | RackIn       | INSERT                  | Local scanner log for rack-in ops.
+----|--------------|-------------------------|----------------------------------------
+ 12 | Receiving    | INSERT                  | Local scanner log for receiving ops.
+
+
+------------------------------------------------------------------------------
+1.2 DETAILED COLUMN USAGE PER TABLE
+------------------------------------------------------------------------------
+
+TA_PLT001 (Pallet Card Master)
+  Columns: PltNo, PCode, Batch, Cycle, FullQty, LsQty, Unit, PName, PGroup,
+           TStatus, Status, PickBy, RecUser, RecDate, RecTime
+  - SELECT: Read pallet info, check TStatus, check Status
+  - UPDATE: SET TStatus='Transfer' (on receive),
+            SET Status='C' (on rack-in close)
+
+TA_PLT002 (Transfer Sheet)
+  Columns: Pallet, TStatus, Status, PickBy, RecUser, RecDate, RecTime, AddDate
+  - SELECT: Check transfer status, check closed status
+  - UPDATE: SET TStatus='Transfer' (on receive),
+            SET Status='C' (on rack-in close)
+
+TA_PLL001 (Loose Pallet Detail)
+  Columns: PltNo, Batch, Run, Qty
+  - SELECT: Check if pallet is loose, read all entries for loop processing
+
+IV_0250 (Inventory at Location)
+  Columns: Loct, PCode, PGroup, Batch, PName, Unit, Run, Status, OpenQty,
+           InputQty, OutputQty, OnHand, Pallet, MFGDate, EXPDate,
+           AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: Check stock at transit, check stock at rack, Kulim check (TST4)
+  - UPDATE: Deduct transit (OutputQty+=qty, OnHand-=qty),
+            Add to rack (InputQty+=qty, OnHand+=qty)
+  - INSERT: New rack location record
+
+BD_0010 (Rack/Location Master)
+  Columns: Rack
+  - SELECT: Validate rack number exists
+
+PD_0800 (Stock Summary)
+  Columns: Batch, Run, PCode, QS, Rack_In, SORack, Balance, TS_OUT
+  - SELECT: Validate stock summary exists, read Rack_In value
+  - UPDATE: SET Rack_In+=qty, SORack=rackBal (non-Kulim)
+            SET Rack_In+=qty, SORack=rackBal, Balance=rackBal (Kulim)
+
+TA_LOC0600 (Rack-In Log)
+  Columns: Pallet, Rack, Batch, Run, PCode, PName, PGroup, Qty, Unit, Ref,
+           AddUser, AddDate, AddTime, EditUser, EditDate, EditTime
+  - SELECT: Check if log exists for upsert
+  - INSERT: New log entry (Ref=1 Normal, Ref=2 Loose)
+  - UPDATE: Update existing log entry
+
+
+================================================================================
+2. PROCESS FLOWS — RECEIVING (frmReceiving.vb)
+================================================================================
+
+Purpose: Move stock from TST1 (Production Transit) to TST2 (FGWH Transit)
+         and mark pallet as "Transfer" received.
+
+Note: This form is NOT yet ported to Flutter. The Flutter app currently
+      only implements the Rack-In (frmStockIn_1) step.
+
+------------------------------------------------------------------------------
+2.1 BARCODE SCAN FLOW
+------------------------------------------------------------------------------
+
+  Step 1: Scan pallet barcode
+    - Accepted length: 8 or 10
+    - Trim: len 8 → first 7, len 10 → first 9 (uppercase)
+
+  Step 2: Check already received
+    Query: SELECT COUNT(PltNo) FROM TA_PLT001
+           WHERE PltNo=@PltNo AND TStatus='Transfer'
+    If > 0 → "Pallet sudah diterima"
+
+    Query: SELECT COUNT(Pallet) FROM TA_PLT002
+           WHERE Pallet=@Pallet AND TStatus='Transfer'
+    If > 0 → "Pallet sudah diterima"
+
+  Step 3: Check pallet type (loose vs normal)
+    Query: SELECT * FROM TA_PLL001 WHERE PltNo=@PltNo
+
+    If no rows (NORMAL):
+      Query: SELECT Batch,PCode,FullQty,Unit,lsQty,Cycle
+             FROM TA_PLT001 WHERE PltNo='<pallet>'
+      If no rows → "Pallet Tidak Sah"
+      Else → populate fields, qty = FullQty + lsQty
+
+    If rows (LOOSE):
+      Read PCode/Unit from TA_PLT001
+      Loop TA_PLL001: comma-join Run values, sum Qty
+
+  Step 4: Check stock at TST1
+    Query: SELECT COUNT(loct) FROM IV_0250
+           WHERE Loct='TST1' AND Batch=@Batch AND Pallet=@Pallet
+    If 0 → "Tiada stok di TST1. Tiada transfer sheet"
+
+------------------------------------------------------------------------------
+2.2 NORMAL PALLET — OK BUTTON
+------------------------------------------------------------------------------
+
+  Step 1: Read pallet info from TA_PLT001
+    If no rows → "Invalid Pallet No"
+
+  Step 2: Check stock at TST1
+    Query: SELECT * FROM IV_0250
+           WHERE Loct='TST1' AND Pallet=@Pallet AND OnHand > 0
+    If no rows → "Tiada stok di TST1."
+
+  Step 3: Deduct TST1
+    UPDATE IV_0250 SET OutputQty = oriOutputQty + qty,
+                       OnHand = oriOnHand - qty
+    WHERE Loct='TST1' ...
+
+  Step 4: Add stock to TST2
+    Check if TST2 exists → UPDATE or INSERT IV_0250 at Loct='TST2'
+
+  Step 5: Update Pallet Card
+    UPDATE TA_PLT001 SET TStatus='Transfer', PickBy, RecUser, RecDate, RecTime
+
+  Step 6: Update Transfer Sheet
+    UPDATE TA_PLT002 SET TStatus='Transfer', PickBy, RecUser, RecDate, RecTime
+
+  Step 7: Save local log (INSERT into SqlCe Receiving table)
+
+  Step 8: Beep on success
+
+------------------------------------------------------------------------------
+2.3 LOOSE PALLET — OK BUTTON
+------------------------------------------------------------------------------
+
+  Same as Normal but loops through each row in TA_PLL001:
+  - For each batch/run: deduct TST1, add to TST2, save local log
+  - After loop: update TA_PLT001/TA_PLT002 TStatus='Transfer'
+
+
+================================================================================
+3. PROCESS FLOWS — RACK-IN (frmStockIn_1.vb)
+================================================================================
+
+Purpose: Move stock from TST2/TST4 to actual rack location, close pallet
+         card, update stock summary.
+
+Flutter: lib/screens/stock_in/rack_in_screen.dart
+
+------------------------------------------------------------------------------
+3.1 BARCODE SCAN — PALLET (Length 8, 9, or 10)
+------------------------------------------------------------------------------
+
+  Trim rules:
+    len 9  → first 8 chars, uppercase
+    len 10 → first 9 chars, uppercase
+    len 8  → first 7 chars, uppercase
+
+  Validation sequence:
+
+  Step 1: Check pallet exists
+    Query: SELECT PCode FROM TA_PLT001 WHERE PltNo=@PltNo
+    If not found → check Kulim:
+      Query: SELECT * FROM IV_0250
+             WHERE Pallet=@Pallet AND Loct='TST4' AND OnHand > 0
+      If not found → "Nombor pallet tidak sah atau sudah dimasukkan ke lokasi"
+      If found → set Kulim=True, populate fields from IV_0250
+
+  Step 2: Check received (non-Kulim)
+    Query: SELECT COUNT(PltNo) FROM TA_PLT001
+           WHERE PltNo=@PltNo AND TStatus='Transfer'
+    Fallback: SELECT COUNT(Pallet) FROM TA_PLT002
+              WHERE Pallet=@Pallet AND TStatus='Transfer'
+    If both 0 → "Pallet belum diterima"
+
+  Step 3: Check not already racked (non-Kulim)
+    Query: SELECT COUNT(PltNo) FROM TA_PLT001
+           WHERE PltNo=@PltNo AND TStatus='Transfer' AND Status='C'
+    And: SELECT COUNT(Pallet) FROM TA_PLT002
+         WHERE Pallet=@Pallet AND TStatus='Transfer' AND Status='C'
+    If both > 0 → "Pallet sudah dimasukkan ke lokasi"
+
+  Step 4: Check stock summary
+    Query: SELECT COUNT(Batch) FROM PD_0800
+           WHERE Batch=@Batch AND Run=@Run AND PCode=@PCode
+    If 0 → "Tiada Ringkasan Stok - PD_0800"
+
+  Step 5: Determine pallet type
+    Query: SELECT * FROM TA_PLL001 WHERE PltNo=@PltNo
+
+    NORMAL (no rows):
+      Category = "NORMAL"
+      Read: SELECT Batch,PCode,FullQty,Unit,lsQty,Cycle FROM TA_PLT001
+      Qty = FullQty + lsQty
+
+    LOOSE (rows found):
+      Category = "LOOSE"
+      Read PCode/Unit from TA_PLT001
+      Loop TA_PLL001: comma-join Run values, sum Qty
+
+  Step 6: Focus moves to rack field
+
+------------------------------------------------------------------------------
+3.2 BARCODE SCAN — RACK (Length 5 or 6)
+------------------------------------------------------------------------------
+
+  Trim rules:
+    len 5 → first 4 chars, uppercase
+    len 6 → first 5 chars, uppercase
+
+  Validations:
+    If pallet empty → "Sila Imbas no Pallet dahulu"
+
+    Query: SELECT Rack FROM BD_0010 WHERE Rack=@Rack
+    If no rows → "Nombor lokasi tidak sah"
+
+  Also triggered by: txtRack Enter key press (manual entry)
+
+------------------------------------------------------------------------------
+3.3 OK BUTTON — NORMAL PALLET TRANSACTION
+------------------------------------------------------------------------------
+
+  Pre-checks:
+    If rack empty → "Sila imbas no lokasi"
+
+  Step 1: Check if rack already has products
+    Query: SELECT COUNT(Loct) FROM IV_0250
+           WHERE Loct=@Loct AND OnHand > 0
+    If > 0:
+      Dialog 1: "Lokasi ini sudah ada Produk" (OK/Cancel)
+        Cancel → "Sila imbas lokasi lain" → exit
+        OK → Dialog 2: "Teruskan rack-in di lokasi ini?" (OK/Cancel)
+          Cancel → exit
+
+  Step 2: Verify PD_0800 exists
+    Query: SELECT COUNT(Batch) FROM PD_0800
+           WHERE Batch=@Batch AND Run=@Run AND PCode=@PCode
+    If 0 → "Tiada ringkasan stok dalam PD_0800"
+
+  Step 3: Deduct from transit location
+    Transit = TST4 (Kulim) or TST2 (KB/local)
+
+    Query: SELECT * FROM IV_0250
+           WHERE Loct=@Transit AND Batch=@Batch AND Run=@Run
+                 AND Pallet=@Pallet AND OnHand > 0
+    If no rows → "Tiada stok di TST4" / "Tiada stok di TST2"
+
+    UPDATE IV_0250
+      SET OutputQty = oriOutputQty + qty,
+          OnHand = oriOnHand - qty,
+          EditUser, EditDate, EditTime
+      WHERE Loct=@Transit AND Pallet AND Batch AND Run AND OnHand > 0
+
+  Step 4: Register rack location
+    Query: SELECT * FROM IV_0250
+           WHERE Loct=@Rack AND Batch=@Batch AND Run=@Run AND Pallet=@Pallet
+
+    If no rows:
+      INSERT INTO IV_0250 (Loct,PCode,PGroup,Batch,PName,Unit,Run,Status,
+        OpenQty,InputQty,OutputQty,OnHand,Pallet,AddUser,AddDate,AddTime)
+      VALUES (@Rack, ..., OpenQty=0, InputQty=qty, OutputQty=0, OnHand=qty)
+
+    If exists:
+      UPDATE IV_0250
+        SET OnHand = existOnHand + qty,
+            InputQty = existInputQty + qty,
+            Pallet, EditUser, EditDate, EditTime
+        WHERE Loct=@Rack AND Batch AND Run AND Pallet
+
+  Step 5: Close pallet card (non-Kulim only)
+    Check TA_PLT001 count → UPDATE TA_PLT001 SET Status='C' WHERE PltNo=@PltNo
+    Check TA_PLT002 count → UPDATE TA_PLT002 SET Status='C' WHERE Pallet=@Pallet
+    If not found → "Nombor pallet tidak sah"
+
+  Step 6: Calculate rack balance
+    Query: SELECT SUM(OnHand) AS Qty FROM IV_0250
+           WHERE Batch=@Batch AND Run=@Run AND OnHand > 0
+           GROUP BY Batch, Run
+
+  Step 7: Update PD_0800
+    Query: SELECT Rack_In FROM PD_0800
+           WHERE Batch=@Batch AND Run=@Run AND PCode=@PCode
+
+    Kulim:
+      UPDATE PD_0800 SET Rack_In = existRackIn + qty,
+                         SORack = rackBal,
+                         Balance = rackBal
+
+    Non-Kulim:
+      UPDATE PD_0800 SET Rack_In = existRackIn + qty,
+                         SORack = rackBal
+
+  Step 8: Log to TA_LOC0600 (Ref=1)
+    Upsert: check if exists → UPDATE with EditUser/Date/Time
+                             → or INSERT with AddUser/Date/Time
+
+  Step 9: Save local scanner log (INSERT into RackIn table)
+    Fields: PalletNo, ID, BatchNo, Run, PCode, Qty, RackNo, AddUser,
+            AddDate, AddTime
+
+  Step 10: Refresh ListView (show all IV_0250 records for this pallet)
+
+  Step 11: Beep on success, clear fields
+
+------------------------------------------------------------------------------
+3.4 OK BUTTON — LOOSE PALLET TRANSACTION
+------------------------------------------------------------------------------
+
+  Loops through each row in TA_PLL001 for the pallet:
+
+  For EACH loose entry (batch/run):
+
+    Step L1: Check PD_0800 per run
+      If 0 → "Tiada ringkasan stok dalam PD_0800"
+
+    Step L2: Deduct from TST2 (always TST2, no Kulim variant for loose)
+      Query: SELECT * FROM IV_0250
+             WHERE Loct='TST2' AND Batch AND Run AND Pallet AND OnHand > 0
+      If no stock → "Tiada Stok Di Transit FGWH"
+      UPDATE IV_0250 SET OutputQty += looseQty, OnHand -= looseQty
+
+    Step L3: Register rack location (INSERT or UPDATE IV_0250)
+
+    Step L4: Log to TA_LOC0600 with Ref=2 (loose)
+
+    Step L5: Calculate rack balance & update PD_0800
+      UPDATE PD_0800 SET Rack_In += looseQty, SORack = rackBal
+
+    Step L6: Save local scanner log per run
+
+  After loop:
+    - Refresh ListView
+    - Close Pallet Card: UPDATE TA_PLT001 SET Status='C'
+    - Close Transfer Sheet: UPDATE TA_PLT002 SET Status='C'
+      If not found → "Invalid Pallet"
+    - Beep on success, clear fields
+
+
+================================================================================
+4. PROCESS FLOWS — COMBINED RECEIVE + RACK-IN (frmStockIN_TST.vb)
+================================================================================
+
+Purpose: Single-button flow that auto-receives if needed, then racks in.
+         Used for direct TST workflow without separate receiving step.
+
+Note: This form is NOT yet ported to Flutter.
+
+------------------------------------------------------------------------------
+4.1 PALLET INPUT (Enter key)
+------------------------------------------------------------------------------
+
+  Step 1: Check pallet type (NORMAL/LOOSE) via TA_PLL001 count
+  Step 2: Read pallet details from TA_PLT001
+    If not found → "Nombor Pallet tidak sah"
+  Step 3: Read pallet date from TA_PLT002
+  Step 4: Set txtActualQty = txtPalletQty, focus to qty field
+
+------------------------------------------------------------------------------
+4.2 RACK INPUT (Enter key)
+------------------------------------------------------------------------------
+
+  Validate: SELECT Rack FROM BD_0010 WHERE Rack=@Rack
+  If not found → "Nombor lokasi tidak sah"
+
+------------------------------------------------------------------------------
+4.3 INBOUND BUTTON — NORMAL PALLET
+------------------------------------------------------------------------------
+
+  Step 1: Validate rack (BD_0010)
+
+  Step 2: Read QC Status from PD_0800
+
+  Step 3: Check if already received
+    Query: SELECT COUNT(PltNo) FROM TA_PLT001
+           WHERE TStatus='Transfer' AND PltNo=@PltNo
+
+    IF NOT RECEIVED (count=0): Auto-receive first
+      a. Check/create TST1 in IV_0250
+      b. Update Pallet Card: SET TStatus='Transfer'
+      c. Update Transfer Sheet: SET TStatus='Transfer'
+
+    IF ALREADY RECEIVED: Check TST1 stock, create if missing
+
+  Step 4: Check if already stock-in'd
+    Query: SELECT COUNT(Pallet) FROM TA_PLT002
+           WHERE Status='C' AND Pallet=@Pallet
+
+    IF NOT STOCK-IN'D (count=0): Full stock-in
+      a. Check PD_0800 → "Tiada ringkasan stok dalam PD_0800"
+      b. Check/create TST2
+      c. Deduct TST2 → "Tiada stok di TST2"
+      d. Register rack location
+      e. Close Pallet Card: Status='C', TStatus='Transfer'
+      f. Close Transfer Sheet: Status='C', TStatus='Transfer'
+      g. Calculate balance, update PD_0800
+      h. Save log TA_LOC0600 (Ref=1)
+      i. Beep on success
+
+    IF ALREADY STOCK-IN'D (count>0): Re-rack
+      a. Update/create TST2 (set OnHand=0)
+      b. Register rack location
+
+  Step 5 (Loose variant): Same loop logic per TA_PLL001 row
+
+------------------------------------------------------------------------------
+4.4 SEQUENCE GENERATOR (Seq_Check)
+------------------------------------------------------------------------------
+
+  Query: SELECT * FROM SY_0040 WHERE KeyCD1=@KeyCD1 AND KeyCD2='17'
+  If no sequence → "No sequence Number !"
+  Else: increment MSEQ, format as TS<YY><5-digit seq>
+
+
+================================================================================
+5. LOCATION VIEWER (frmLokasi.vb) — READ ONLY
+================================================================================
+
+Purpose: View stock at various locations for a given Batch/Run or DA number.
+
+  Batch lookup:
+    Query: SELECT Batch, UKEKN1 FROM PD_0010 WHERE Batch=@Batch
+    If no rows → "No Batch tidak sah"
+    If UKEKN1=0 → Run = "-" (no run)
+
+  By Batch/Run:
+    Query: SELECT Loct,Pallet,Batch,Run,OnHand,PCode FROM IV_0250
+           WHERE Batch=@Batch AND Run=@Run AND OnHand > 0
+    If no rows → "Tiada stok untuk Batch ini"
+
+  By DA Number:
+    Query: SELECT DANo, Batch, Run FROM DO_0020 WHERE DANo=@DANo
+    Then per batch/run: same IV_0250 query above
+
+
+================================================================================
+6. COMPLETE MESSAGEBOX CATALOG — ALL FORMS
+================================================================================
+
+------------------------------------------------------------------------------
+6.1 frmStockIn_1 (Rack-In) — 20+ Messages
+------------------------------------------------------------------------------
+
+ #  | Message Text                                                | Style     | Condition
+----|-------------------------------------------------------------|-----------|------------------------------------
+ 1  | "Nombor pallet tidak sah atau sudah dimasukkan ke lokasi"   | Critical  | Not in TA_PLT001 & not in TST4
+ 2  | "Pallet belum diterima"                                     | OkOnly   | TStatus ≠ 'Transfer' in both tables
+ 3  | "Pallet sudah dimasukkan ke lokasi"                         | OkOnly   | Status='C' in both tables
+ 4  | "Tiada Ringkasan Stok - PD_0800"                            | OkOnly   | No PD_0800 record
+ 5  | ex.Message                                                  | OkOnly   | General exception during scan
+ 6  | "Sila Imbas no Pallet dahulu"                               | Critical  | Rack scanned before pallet
+ 7  | "Nombor lokasi tidak sah"                                   | OkOnly   | Rack not in BD_0010
+ 8  | "Sila imbas no lokasi"                                      | Critical  | OK clicked with empty rack
+ 9  | "Lokasi ini sudah ada Produk"                                | OkCancel | Rack has existing stock (OnHand>0)
+ 10 | "Sila imbas lokasi lain"                                    | OkOnly   | User cancels occupied rack dialog
+ 11 | "Teruskan rack-in di lokasi ini?"                            | OkCancel | Confirm proceed with occupied rack
+ 12 | "Tiada ringkasan stok dalam PD_0800"                         | OkOnly   | No PD_0800 for batch/run/pcode
+ 13 | "Tiada stok di TST4"                                        | OkOnly   | Kulim product, no stock at TST4
+ 14 | "Tiada stok di TST2"                                        | OkOnly   | KB product, no stock at TST2
+ 15 | "Nombor pallet tidak sah"                                   | OkOnly   | Pallet not found when closing
+ 16 | "Invalid Pallet"                                            | OkOnly   | Loose pallet close failure
+ 17 | "Tiada Stok Di Transit FGWH"                                | OkOnly   | Loose, no stock at TST2
+ 18 | "Scanner sudah ON"                                          | Info     | Reload when scanner active
+ 19 | Various "Error while ..." + ex.Message                      | Critical  | Exception handlers
+
+------------------------------------------------------------------------------
+6.2 frmReceiving — 7+ Messages
+------------------------------------------------------------------------------
+
+ #  | Message Text                                                | Style     | Condition
+----|-------------------------------------------------------------|-----------|------------------------------------
+ 1  | "Pallet sudah diterima"                                     | OkOnly   | Already received (TStatus='Transfer')
+ 2  | "Pallet Tidak Sah"                                          | OkOnly   | Pallet not in TA_PLT001
+ 3  | "Tiada stok di TST1.\nTiada transfer sheet"                 | OkOnly   | No stock at TST1
+ 4  | "Invalid Pallet No"                                         | OkOnly   | Normal pallet not in TA_PLT001
+ 5  | "Tiada stok di TST1."                                       | OkOnly   | Normal pallet, no stock at TST1
+ 6  | "Nombor pallet tidak sah"                                   | OkOnly   | Loose pallet not in TA_PLT001
+ 7  | Various "Error while ..." + ex.Message                      | Critical  | Exception handlers
+
+------------------------------------------------------------------------------
+6.3 frmStockIN_TST — 8+ Messages
+------------------------------------------------------------------------------
+
+ #  | Message Text                                                | Style     | Condition
+----|-------------------------------------------------------------|-----------|------------------------------------
+ 1  | "Nombor lokasi tidak sah"                                   | OkOnly   | Rack not in BD_0010
+ 2  | "Nombor Pallet tidak sah"                                   | Critical  | Pallet not in TA_PLT001
+ 3  | "Tiada ringkasan stok dalam PD_0800"                         | OkOnly   | No PD_0800 record
+ 4  | "Tiada stok di TST2"                                        | OkOnly   | No stock at TST2 transit
+ 5  | "Nombor pallet tidak sah"                                   | OkOnly   | Pallet card not found on close
+ 6  | "No sequence Number !"                                      | OkOnly   | Missing SY_0040 sequence
+ 7  | "Scanner sudah ON"                                          | Info     | Reload when scanner active
+ 8  | Various "Error while ..." + ex.Message                      | Critical  | Exception handlers
+
+------------------------------------------------------------------------------
+6.4 frmLokasi — 2 Messages
+------------------------------------------------------------------------------
+
+ #  | Message Text                                                | Style     | Condition
+----|-------------------------------------------------------------|-----------|------------------------------------
+ 1  | "Tiada stok untuk Batch ini"                                | Critical  | No IV_0250 records with OnHand > 0
+ 2  | "No Batch tidak sah"                                        | Critical  | Batch not in PD_0010
+
+
+================================================================================
+7. FLUTTER IMPLEMENTATION — MESSAGES CATALOG
+================================================================================
+
+File: lib/screens/stock_in/rack_in_screen.dart
+All messages use AlertDialog with a single OK button (via _showError method).
+The confirmation dialog uses a two-step AlertDialog (via _showConfirmDialog).
+
+ #  | Message Text                                                | Method            | Type
+----|-------------------------------------------------------------|-------------------|------------------
+ 1  | "Nombor pallet tidak sah"                                   | _onPalletScanned  | AlertDialog
+ 2  | "Nombor pallet tidak sah atau sudah dimasukkan ke lokasi"   | _onPalletScanned  | AlertDialog
+ 3  | "Pallet belum diterima"                                     | _onPalletScanned  | AlertDialog
+ 4  | "Pallet sudah dimasukkan ke lokasi"                         | _onPalletScanned  | AlertDialog
+ 5  | "Tiada Ringkasan Stok - PD_0800"                            | _onPalletScanned  | AlertDialog
+ 6  | "Error: $e"                                                 | _onPalletScanned  | AlertDialog
+ 7  | "Sila Imbas no Pallet dahulu"                               | _onRackScanned    | AlertDialog
+ 8  | "Nombor lokasi tidak sah"                                   | _onRackScanned    | AlertDialog
+ 9  | "Error: $e"                                                 | _onRackScanned    | AlertDialog
+ 10 | "Sila Imbas no Pallet dahulu"                               | _onOkPressed      | AlertDialog
+ 11 | "Sila imbas no lokasi"                                      | _onOkPressed      | AlertDialog
+ 12 | "Error: $e"                                                 | _onOkPressed      | AlertDialog
+ 13 | "Lokasi ini sudah ada Produk"                                | _normalPallet     | 2-step confirm
+ 14 | "Sila imbas lokasi lain"                                    | _showConfirmDialog| AlertDialog
+ 15 | "Teruskan rack-in di lokasi ini?"                            | _normalPallet     | 2-step confirm
+ 16 | "Tiada ringkasan stok dalam PD_0800"                         | _normalPallet     | AlertDialog
+ 17 | "Tiada stok di TST4" / "Tiada stok di TST2"                 | _normalPallet     | AlertDialog
+ 18 | "Error while updating PD_0800: $e"                          | _normalPallet     | AlertDialog
+ 19 | "Tiada ringkasan stok dalam PD_0800"                         | _loosePallet      | AlertDialog
+ 20 | "Tiada stok di TST2"                                        | _loosePallet      | AlertDialog
+ 21 | "Error while updating PD_0800: $e"                          | _loosePallet      | AlertDialog
+ 22 | "Error while closing pallet card: $e"                       | _loosePallet      | AlertDialog
+ 23 | "Error while updating TA_LOC0600: $e"                       | _upsertLoc0600    | AlertDialog
+ 24 | "Error while updating scanner log: $e"                      | _insertLocalLog   | AlertDialog
+ 25 | "Error while loading stock locations: $e"                   | _loadStockLocations| AlertDialog
+
+
+================================================================================
+8. VB.NET ↔ FLUTTER COMPARISON — RACK-IN (frmStockIn_1 vs rack_in_screen.dart)
+================================================================================
+
+Feature                          | VB.NET          | Flutter          | Match?
+---------------------------------|-----------------|------------------|--------
+Pallet barcode trim (len 8/9/10) | ✓               | ✓                | YES
+Kulim product detection (TST4)   | ✓               | ✓                | YES
+Transfer check (TStatus)         | ✓               | ✓                | YES
+Closed check (Status='C')        | ✓               | ✓                | YES
+PD_0800 stock summary check      | ✓               | ✓                | YES
+Normal vs Loose (TA_PLL001)      | ✓               | ✓                | YES
+Rack validation (BD_0010)        | ✓               | ✓                | YES
+Occupied rack confirm (2-step)   | ✓               | ✓                | YES
+Deduct transit (TST2/TST4)       | ✓               | ✓                | YES
+Register rack (INSERT/UPDATE)    | ✓               | ✓                | YES
+Close pallet card (Status='C')   | ✓               | ✓                | YES
+Close transfer sheet (Status='C')| ✓               | ✓                | YES
+PD_0800 update (Rack_In,SORack)  | ✓               | ✓                | YES
+PD_0800 Balance (Kulim only)     | ✓               | ✓                | YES
+Log to TA_LOC0600 (Ref=1/2)      | ✓               | ✓                | YES
+Local scanner log                | ✓               | ✓                | YES
+All message texts (Malay)        | ✓               | ✓                | YES
+Scanner reload handling          | ✓               | N/A (no scanner) | N/A
+Beep on success                  | ✓               | Not implemented  | MISSING
+ListView refresh                 | ✓               | ✓                | YES
+
+
+================================================================================
+9. KNOWN ISSUES / BUGS
+================================================================================
+
+BUG: GROUP BY OnHand in Loose Pallet Rack Balance Calculation
+-------------------------------------------------------------
+Location (VB.NET): frmStockIn_1.vb line 625
+Location (Flutter): rack_in_screen.dart line 778
+
+  INCORRECT (Loose Pallet):
+    SELECT SUM(OnHand) AS Qty FROM IV_0250
+    WHERE Batch=@Batch AND Run=@Run AND OnHand > 0
+    GROUP BY OnHand
+
+  CORRECT (Normal Pallet — same file):
+    SELECT SUM(OnHand) AS Qty FROM IV_0250
+    WHERE Batch=@Batch AND Run=@Run AND OnHand > 0
+    GROUP BY Batch, Run
+
+  Analysis: The loose pallet path groups by OnHand (the value being summed),
+  which will return multiple rows if different OnHand values exist, instead
+  of a single aggregated sum. The normal pallet path correctly groups by
+  Batch, Run. This bug exists in the original VB.NET code at line 625 and
+  was faithfully ported to Flutter. The VB.NET code at line 1009 (normal
+  pallet) uses the correct GROUP BY.
+
+  Impact: May return incorrect rack balance when there are multiple IV_0250
+  rows with different OnHand values for the same Batch/Run. The first row's
+  Qty would be used, potentially underestimating the total.
+
+  Fix: Change GROUP BY OnHand → GROUP BY Batch, Run
+
+
+================================================================================
+10. PALLET TYPE DIFFERENCES
+================================================================================
+
+ Aspect              | Normal Pallet          | Loose Pallet
+---------------------|------------------------|----------------------------
+ TA_PLL001 rows      | 0                      | 1+
+ Qty source          | TA_PLT001.FullQty+lsQty| SUM of TA_PLL001.Qty
+ Run display         | Single value (Cycle)   | Comma-separated list
+ Processing          | Single transaction     | Loop per TA_PLL001 row
+ TA_LOC0600 Ref      | 1                      | 2
+ Category label      | "NORMAL"               | "LOOSE"
+ Transit deduct      | TST2 or TST4 (Kulim)  | TST2 only (no Kulim)
+
+================================================================================
+11. NOT YET PORTED TO FLUTTER
+================================================================================
+
+ Form                | Purpose                          | Status
+---------------------|----------------------------------|-------------------
+ frmReceiving        | Receiving (TST1 → TST2)          | Not ported
+ frmStockIN_TST      | Combined Receive + Rack-In       | Not ported
+ frmLokasi           | Location Viewer (read-only)      | Not ported
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
